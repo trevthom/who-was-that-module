@@ -456,14 +456,54 @@
 
   /* ---------- panel + modal plumbing ---------- */
 
+  /**
+   * Controls are addressed by data hooks, not by CSS classes: renaming a class
+   * for styling must never unhook a button. A missing hook reports itself and
+   * returns null instead of throwing, so one broken control can't silently
+   * leave every control after it in the same dialog dead.
+   */
+  function control(root, selector, description) {
+    const element = root ? root.querySelector(selector) : null;
+    if (!element) {
+      reportMissingControl(description || selector);
+      return null;
+    }
+    return element;
+  }
+
+  function onControl(root, selector, handler, description) {
+    const element = control(root, selector, description);
+    if (element) element.onclick = handler;
+    return element;
+  }
+
+  // Every dialog closes through [data-x], the same hook the original editor uses.
+  function wireClose(root, handler) {
+    const buttons = root ? root.querySelectorAll('[data-x]') : [];
+    if (!buttons.length) {
+      reportMissingControl('close button');
+      return;
+    }
+    buttons.forEach((button) => {
+      button.onclick = handler;
+    });
+  }
+
+  function reportMissingControl(description) {
+    if (window.console && window.console.error) {
+      window.console.error('[who-was-that] missing control: ' + description);
+    }
+    toast('This screen is missing its ' + description + '. Reload and try again.', true);
+  }
+
   function openPanel(title, bodyNode, footNode) {
     const panel = $('panel');
     panel.innerHTML = '';
     const head = node(
       '<div class="wwt-panel-head"><h2>' + escapeHtml(title) + '</h2>' +
-      '<button class="wwt-x-btn" type="button" aria-label="Close">×</button></div>'
+      '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>'
     );
-    head.querySelector('.wwt-x-btn').onclick = closePanel;
+    wireClose(head, closePanel);
     panel.appendChild(head);
 
     const body = node('<div class="wwt-panel-body"></div>');
@@ -539,11 +579,16 @@
       '" type="button" data-yes>' + escapeHtml(options.confirmLabel || 'Confirm') + '</button>' +
       '</div></div>'
     );
-    modal.querySelector('[data-x]').onclick = closeModal;
-    modal.querySelector('[data-yes]').onclick = function () {
-      closeModal();
-      if (options.onConfirm) options.onConfirm();
-    };
+    wireClose(modal, closeModal);
+    onControl(
+      modal,
+      '[data-yes]',
+      function () {
+        closeModal();
+        if (options.onConfirm) options.onConfirm();
+      },
+      'confirm button'
+    );
     openModal(modal);
   }
 
@@ -635,7 +680,7 @@
     const modal = node(
       '<div class="wwt-modal" role="dialog" aria-modal="true">' +
       '<div class="wwt-modal-head"><h2>' + (isSelf ? 'My information' : '') + '</h2>' +
-      '<button class="wwt-x-btn" type="button" aria-label="Close">×</button></div>' +
+      '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>' +
       '<div class="wwt-modal-body"></div>' +
       '<div class="wwt-modal-foot"></div></div>'
     );
@@ -688,25 +733,25 @@
           '<div class="wwt-rel-head"><span class="wwt-rel-type">' + escapeHtml(relative.type) + '</span>' +
           '<span class="v">' + escapeHtml(relative.name || '—') + '</span></div>' +
           '<div class="wwt-rel-actions">' +
-          (relativeCard ? '<button class="wwt-btn wwt-btn-ghost xsmall rel-card" type="button">Show card</button>' : '') +
-          (hasLocation ? '<button class="wwt-btn wwt-btn-ghost xsmall rel-map" type="button">Show on map</button>' : '') +
-          '<button class="wwt-btn wwt-btn-ghost xsmall rel-remove" type="button">Remove relationship</button>' +
+          (relativeCard ? '<button class="wwt-btn wwt-btn-ghost xsmall rel-card" type="button" data-rel="card">Show card</button>' : '') +
+          (hasLocation ? '<button class="wwt-btn wwt-btn-ghost xsmall rel-map" type="button" data-rel="map">Show on map</button>' : '') +
+          '<button class="wwt-btn wwt-btn-ghost xsmall rel-remove" type="button" data-rel="remove-relationship">Remove relationship</button>' +
           '</div></div>'
         );
 
         if (relativeCard) {
-          line.querySelector('.rel-card').onclick = () => {
+          line.querySelector('[data-rel="card"]').onclick = () => {
             closeModal();
             openCardView(relativeCard.is_self ? 'self' : relativeCard.id);
           };
         }
         if (hasLocation) {
-          line.querySelector('.rel-map').onclick = () => {
+          line.querySelector('[data-rel="map"]').onclick = () => {
             closeModal();
             panTo(relative.lat, relative.lng);
           };
         }
-        line.querySelector('.rel-remove').onclick = () => {
+        onControl(line, '[data-rel="remove-relationship"]', () => {
           confirmDialog({
             title: 'Remove relationship?',
             message:
@@ -716,7 +761,7 @@
             danger: true,
             onConfirm: () => removeRelative(ownerId, relative.id),
           });
-        };
+        }, 'remove-relationship button');
         wrap.appendChild(line);
       });
       body.appendChild(wrap);
@@ -754,7 +799,7 @@
       foot.appendChild(remove);
     }
 
-    modal.querySelector('.wwt-x-btn').onclick = closeModal;
+    wireClose(modal, closeModal);
     openModal(modal);
   }
 
@@ -820,7 +865,7 @@
     const modal = node(
       '<div class="wwt-modal" role="dialog" aria-modal="true">' +
       '<div class="wwt-modal-head"><h2>' + escapeHtml(title) + '</h2>' +
-      '<button class="wwt-x-btn" type="button" aria-label="Close">×</button></div>' +
+      '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>' +
       '<div class="wwt-modal-body">' +
       '<div class="wwt-name-row">' +
       '<div class="wwt-name-field"><label class="wwt-field-label">Name</label>' +
@@ -840,10 +885,10 @@
       escapeHtml(card.notes) + '</textarea>' +
       '<label class="wwt-field-label">Relatives &amp; children</label>' +
       '<div id="ed-relatives"></div>' +
-      '<button id="ed-add-rel" class="wwt-btn wwt-btn-ghost small" type="button">+ Add relative or child</button>' +
+      '<button id="ed-add-rel" class="wwt-btn wwt-btn-ghost small" type="button" data-edit="add-relative">+ Add relative or child</button>' +
       '<hr class="wwt-ed-divider">' +
       '<label class="wwt-field-label">Location</label>' +
-      '<button id="ed-pin" class="wwt-btn wwt-btn-pin block" type="button">' +
+      '<button id="ed-pin" class="wwt-btn wwt-btn-pin block" type="button" data-edit="pin">' +
       (card.location ? 'Move pin / change address' : 'Set address or pin') + '</button>' +
       '<div id="ed-pin-status" class="wwt-pin-status ' + (card.location ? 'set' : '') + '">' +
       locationStatusHtml(card) + '</div>' +
@@ -857,13 +902,15 @@
     const relWrap = modal.querySelector('#ed-relatives');
     renderRelatives(relWrap, modal);
 
-    modal.querySelector('#ed-add-rel').onclick = () => {
+    const addRelative = control(modal, '[data-edit="add-relative"]', '+ Add relative or child button');
+    if (addRelative) addRelative.onclick = () => {
       editorDraft = captureEditorForm(modal);
       editorDraft.relatives.push(emptyRelative());
       renderRelatives(relWrap, modal);
     };
 
-    modal.querySelector('#ed-pin').onclick = () => {
+    const pinButton = control(modal, '[data-edit="pin"]', 'set-address-or-pin button');
+    if (pinButton) pinButton.onclick = () => {
       editorDraft = captureEditorForm(modal);
       closeModal();
       chooseLocation({
@@ -880,7 +927,8 @@
       });
     };
 
-    modal.querySelector('#ed-save').onclick = () => {
+    const saveButton = control(modal, '#ed-save', 'Save button');
+    if (saveButton) saveButton.onclick = () => {
       const values = captureEditorForm(modal);
       if (!(values.name || '').trim()) {
         toast('Give them a name first', true);
@@ -889,8 +937,7 @@
       saveCard(values);
     };
 
-    modal.querySelector('.wwt-x-btn').onclick = closeModal;
-    modal.querySelectorAll('[data-x]').forEach((button) => (button.onclick = closeModal));
+    wireClose(modal, closeModal);
     openModal(modal);
   }
 
@@ -900,21 +947,22 @@
       const hasLocation = relative.lat !== null && relative.lng !== null;
       const block = node(
         '<div class="wwt-rel-block" data-index="' + index + '">' +
-        '<button class="wwt-rel-remove" type="button" aria-label="Remove">×</button>' +
+        '<button class="wwt-rel-remove" type="button" aria-label="Remove" data-rel="remove">×</button>' +
         '<label class="wwt-field-label" style="margin-top:0">Relationship</label>' +
-        '<select class="wwt-input rel-type">' +
+        '<select class="wwt-input rel-type" data-rel="type">' +
         RELATIVE_TYPES.map((type) => '<option' + (type === relative.type ? ' selected' : '') + '>' + type + '</option>').join('') +
         '</select>' +
-        '<button class="wwt-btn wwt-btn-ghost small rel-frompeople" type="button">Use someone from my people</button>' +
+        '<button class="wwt-btn wwt-btn-ghost small rel-frompeople" type="button" data-rel="frompeople">Use someone from my people</button>' +
         '<label class="wwt-field-label">Name</label>' +
-        '<input class="wwt-input rel-name" value="' + escapeHtml(relative.name) + '" placeholder="Relative\'s name">' +
-        '<button class="wwt-btn wwt-btn-ghost small rel-pin" type="button">' +
+        '<input class="wwt-input rel-name" data-rel="name" value="' + escapeHtml(relative.name) + '" placeholder="Relative\'s name">' +
+        '<button class="wwt-btn wwt-btn-ghost small rel-pin" type="button" data-rel="pin">' +
         (hasLocation ? 'Move pin / change address' : 'Set address or pin') + '</button>' +
         '<div class="wwt-pin-status ' + (hasLocation ? 'set' : '') + '">' +
         relativeLocationHtml(relative) + '</div></div>'
       );
 
-      block.querySelector('.rel-frompeople').onclick = () => {
+      const connectButton = control(block, '[data-rel="frompeople"]', 'use-someone-from-my-people button');
+      if (connectButton) connectButton.onclick = () => {
         editorDraft = captureEditorForm(modal);
         pickFromPeople((person) => {
           if (person) {
@@ -930,13 +978,15 @@
         });
       };
 
-      block.querySelector('.wwt-rel-remove').onclick = () => {
+      const removeButton = control(block, '[data-rel="remove"]', 'remove-relative button');
+      if (removeButton) removeButton.onclick = () => {
         editorDraft = captureEditorForm(modal);
         editorDraft.relatives.splice(index, 1);
         renderRelatives(wrap, modal);
       };
 
-      block.querySelector('.rel-pin').onclick = () => {
+      const relativePinButton = control(block, '[data-rel="pin"]', 'relative location button');
+      if (relativePinButton) relativePinButton.onclick = () => {
         editorDraft = captureEditorForm(modal);
         const name = editorDraft.relatives[index].name || 'this relative';
         closeModal();
@@ -962,7 +1012,7 @@
     const modal = node(
       '<div class="wwt-modal" role="dialog" aria-modal="true">' +
       '<div class="wwt-modal-head"><h2>Choose from your people</h2>' +
-      '<button class="wwt-x-btn" type="button" aria-label="Close">×</button></div>' +
+      '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>' +
       '<div class="wwt-modal-body"></div></div>'
     );
     const body = modal.querySelector('.wwt-modal-body');
@@ -996,7 +1046,7 @@
       closeModal();
       onPick(null);
     };
-    modal.querySelector('.wwt-x-btn').onclick = dismiss;
+    wireClose(modal, dismiss);
     openModal(modal, dismiss);
   }
 
@@ -1018,8 +1068,10 @@
     modal.querySelectorAll('.wwt-rel-block').forEach((block) => {
       const index = Number(block.dataset.index);
       if (!draft.relatives[index]) return;
-      draft.relatives[index].type = block.querySelector('.rel-type').value;
-      draft.relatives[index].name = block.querySelector('.rel-name').value.trim();
+      const typeInput = block.querySelector('[data-rel="type"]');
+      const nameInput = block.querySelector('[data-rel="name"]');
+      if (typeInput) draft.relatives[index].type = typeInput.value;
+      if (nameInput) draft.relatives[index].name = nameInput.value.trim();
     });
     return draft;
   }
@@ -1149,7 +1201,7 @@
     const modal = node(
       '<div class="wwt-modal" role="dialog" aria-modal="true">' +
       '<div class="wwt-modal-head"><h2>' + escapeHtml(options.title || 'Set location') + '</h2>' +
-      '<button class="wwt-x-btn" type="button" aria-label="Close">×</button></div>' +
+      '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>' +
       '<div class="wwt-modal-body">' +
       '<label class="wwt-field-label">Search an address</label>' +
       '<div class="wwt-addr-row">' +
@@ -1188,15 +1240,19 @@
       }
     };
 
-    modal.querySelector('#addr-search').onclick = doSearch;
-    modal.querySelector('#addr-q').addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        doSearch();
-      }
-    });
+    onControl(modal, '#addr-search', doSearch, 'address search button');
+    const addressQuery = control(modal, '#addr-q', 'address search field');
+    if (addressQuery) {
+      addressQuery.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          doSearch();
+        }
+      });
+    }
 
-    modal.querySelector('#addr-manual').onclick = () => {
+    const manualPinButton = control(modal, '#addr-manual', 'place-a-pin-manually button');
+    if (manualPinButton) manualPinButton.onclick = () => {
       closeModal();
       startPick(
         'Tap the map to drop a pin',
@@ -1209,7 +1265,7 @@
       closeModal();
       options.onResult(null);
     };
-    modal.querySelector('.wwt-x-btn').onclick = dismiss;
+    wireClose(modal, dismiss);
     openModal(modal, dismiss);
 
     function confirmAddress(result) {
@@ -1246,7 +1302,7 @@
       const confirmation = node(
         '<div class="wwt-modal" role="dialog" aria-modal="true">' +
         '<div class="wwt-modal-head"><h2>Is this the address?</h2>' +
-        '<button class="wwt-x-btn" type="button" aria-label="Close">×</button></div>' +
+        '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>' +
         '<div class="wwt-modal-body">' +
         '<p class="muted small">Your pin looks like it\'s at:</p>' +
         '<div class="wwt-addr-found">📍 ' + escapeHtml(address) + '</div>' +
@@ -1256,22 +1312,25 @@
         '<button class="wwt-btn wwt-btn-ghost block" id="pin-coords" type="button">Use coordinates only</button>' +
         '</div></div></div>'
       );
-      confirmation.querySelector('#pin-use-addr').onclick = () => {
+      const useAddressButton = control(confirmation, '#pin-use-addr', 'use-this-address button');
+      if (useAddressButton) useAddressButton.onclick = () => {
         closeModal();
         options.onResult({ lat: coordinates.lat, lng: coordinates.lng, address });
       };
-      confirmation.querySelector('#pin-diff-addr').onclick = () => {
+      const differentAddressButton = control(confirmation, '#pin-diff-addr', 'enter-a-different-address button');
+      if (differentAddressButton) differentAddressButton.onclick = () => {
         closeModal();
         chooseLocation(options);
       };
-      confirmation.querySelector('#pin-coords').onclick = () => {
+      const coordinatesOnlyButton = control(confirmation, '#pin-coords', 'use-coordinates-only button');
+      if (coordinatesOnlyButton) coordinatesOnlyButton.onclick = () => {
         closeModal();
         options.onResult({ lat: coordinates.lat, lng: coordinates.lng, address: '' });
       };
-      confirmation.querySelector('.wwt-x-btn').onclick = () => {
+      wireClose(confirmation, () => {
         closeModal();
         options.onResult({ lat: coordinates.lat, lng: coordinates.lng, address: '' });
-      };
+      });
       openModal(confirmation);
     }
   }
