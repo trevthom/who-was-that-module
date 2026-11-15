@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ current_application.name }} · Thompson{% endblock %}
+{% block body_class %}app-body{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='leaflet/leaflet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='who_was_that.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="wwt-app" id="wwt-app"
+         data-theme="{{ settings.theme }}"
+         data-base="{{ url_for('who_was_that.index') }}"
+         style="--wwt-accent: {{ current_application.accent }}">
+
+  <div id="map" class="wwt-map" role="application"
+       aria-label="Map of the people you have pinned"></div>
+
+  <header class="wwt-topbar">
+    <div class="wwt-topbar-brand">
+      <span class="wwt-brand-lock" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <circle cx="12" cy="7" r="4.4"/>
+          <path d="M12 12.2c-4.2 0-7.6 2.9-7.9 6.6-.05.66.49 1.2 1.15 1.2h13.5c.66 0 1.2-.54 1.15-1.2-.3-3.7-3.7-6.6-7.9-6.6z"/>
+        </svg>
+      </span>
+      <span>{{ current_application.name }}</span>
+    </div>
+    <div class="wwt-topbar-actions">
+      <button id="btn-theme" class="wwt-icon-btn" type="button" title="Light Mode"
+              aria-label="Toggle light and dark mode"></button>
+      <button id="btn-people" class="wwt-icon-btn" type="button" title="My People"
+              aria-label="My People">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/>
+          <circle cx="17" cy="8" r="2.6"/><path d="M16 14.5a5 5 0 0 1 4.5 4.5"/>
+        </svg>
+      </button>
+      <button id="btn-settings" class="wwt-icon-btn" type="button" title="Settings"
+              aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 12a7.4 7.4 0 0 0-.12-1.32l2.04-1.55-2-3.46-2.4 1.0a7.3 7.3 0 0 0-2.28-1.32L14.2 2.5h-4l-.36 2.52a7.3 7.3 0 0 0-2.28 1.32l-2.4-1-2 3.46 2.04 1.55A7.4 7.4 0 0 0 5.12 12c0 .45.04.89.12 1.32L3.2 14.87l2 3.46 2.4-1a7.3 7.3 0 0 0 2.28 1.32l.36 2.52h4l.36-2.52a7.3 7.3 0 0 0 2.28-1.32l2.4 1 2-3.46-2.04-1.55c.08-.43.12-.87.12-1.32z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="wwt-fab-stack">
+    <button id="btn-add-person" class="wwt-fab wwt-fab-primary" type="button" title="Add a person">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+           stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="wwt-fab-text">Add person</span>
+    </button>
+    <button id="btn-self-card" class="wwt-fab wwt-fab-self" type="button" title="Your own card">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+           stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>
+      </svg>
+      <span class="wwt-fab-text">My info</span>
+    </button>
+  </div>
+
+  <div id="pick-banner" class="wwt-pick-banner hidden">
+    <span id="pick-banner-text">Tap the map to drop a pin</span>
+    <button id="pick-confirm" class="wwt-btn wwt-btn-pin xsmall hidden" type="button">Confirm</button>
+    <button id="pick-cancel" class="wwt-btn wwt-btn-ghost xsmall" type="button">Cancel</button>
+  </div>
+
+  <div id="overlay" class="wwt-overlay hidden"></div>
+  <aside id="panel" class="wwt-panel hidden" aria-live="polite"></aside>
+
+  <footer class="wwt-footer">
+    <div class="wwt-footer-osm">
+      <a href="https://www.openstreetmap.org/copyright" target="_blank"
+         rel="noopener noreferrer">&copy; OpenStreetMap</a>
+    </div>
+    <nav class="wwt-footer-links" aria-label="Who Was That? links">
+      <a href="{{ url_for('who_was_that.people') }}">All people</a>
+      <a href="{{ url_for('who_was_that.person_new') }}">Add person</a>
+    </nav>
+  </footer>
+
+  <div id="toast-root" class="wwt-toast-root"></div>
+  <div id="modal-root"></div>
+
+  <div id="app-loading" class="wwt-loading hidden" aria-live="polite">
+    <div class="wwt-loading-box">
+      <div class="wwt-spinner" aria-hidden="true"></div>
+      <span id="app-loading-text">Loading…</span>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="wwt-noscript">
+      <p>The map needs JavaScript. You can still browse and edit everyone:</p>
+      <p><a href="{{ url_for('who_was_that.people') }}">Open the people list</a></p>
+    </div>
+  </noscript>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('who_was_that.static', filename='leaflet/leaflet.js') }}" defer></script>
+  <script src="{{ url_for('who_was_that.static', filename='app.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,10 @@
+{
+  "id": "who_was_that",
+  "name": "Who Was That?",
+  "route": "/who-was-that",
+  "icon": "users",
+  "description": "Everyone you've met, and where you know them from.",
+  "accent": "#C2553F",
+  "order": 2,
+  "enabled": true
+}

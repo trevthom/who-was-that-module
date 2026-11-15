@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "who_was_that/_macros.html" import initials %}
+
+{% block title %}{{ person.name }} · {{ current_application.name }} · Thompson{% endblock %}
+{% block body_class %}app-body{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='who_was_that.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="app-layout wwt-page" style="--app-accent: {{ current_application.accent }}">
+  <header class="app-hero">
+    <div>
+      <p class="eyebrow">
+        {% if person.is_self %}My information{% else %}{{ current_application.name }}{% endif %}
+      </p>
+      <h1>{{ person.name }}</h1>
+    </div>
+    <span class="app-hero__icon" aria-hidden="true">{{ icon('users') }}</span>
+  </header>
+
+  <section class="panel">
+    <div class="wwt-person-head">
+      <div class="wwt-avatar wwt-avatar--lg" aria-hidden="true">{{ initials(person.name) }}</div>
+      <div class="wwt-person-head__text">
+        <h2>{{ person.name }}</h2>
+        {% if person.location %}
+          <p class="wwt-person-loc">
+            📍 {% if person.address %}{{ person.address }}
+            <span class="wwt-coord">({{ person.lat }}, {{ person.lng }})</span>
+            {% else %}{{ person.lat }}, {{ person.lng }}{% endif %}
+          </p>
+        {% else %}
+          <p class="wwt-person-loc wwt-muted">No location set</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <dl class="wwt-facts">
+      {% if person.birthday %}
+        <div class="wwt-fact"><dt>Birthday</dt><dd>{{ person.birthday | pretty_date }}</dd></div>
+      {% endif %}
+      {% if person.pets %}
+        <div class="wwt-fact"><dt>Pets</dt><dd>{{ person.pets }}</dd></div>
+      {% endif %}
+      {% if person.known_from %}
+        <div class="wwt-fact"><dt>Where you know them from</dt><dd>{{ person.known_from }}</dd></div>
+      {% endif %}
+      {% if person.notes %}
+        <div class="wwt-fact"><dt>Notes</dt><dd class="wwt-fact__notes">{{ person.notes }}</dd></div>
+      {% endif %}
+    </dl>
+
+    {% if person.relatives %}
+      <div class="wwt-relatives">
+        <h3>Relatives &amp; children</h3>
+        {% for relative in person.relatives %}
+          <div class="wwt-rel-line">
+            <div class="wwt-rel-head">
+              <span class="wwt-rel-type">{{ relative.type }}</span>
+              <span>{{ relative.name or '—' }}</span>
+            </div>
+            {% if relative.address or relative.location %}
+              <p class="wwt-rel-loc">
+                📍 {% if relative.address %}{{ relative.address }}
+                {% elif relative.lat is not none %}{{ relative.lat }}, {{ relative.lng }}{% endif %}
+              </p>
+            {% endif %}
+            <div class="wwt-rel-actions">
+              {% if relative.linked_person_id and linked.get(relative.linked_person_id) %}
+                <a class="button button--secondary" href="{{ url_for('who_was_that.person_detail', person_id=relative.linked_person_id) }}">Show card</a>
+              {% endif %}
+              {% if relative.location %}
+                <a class="text-button" href="{{ url_for('who_was_that.index', lat=relative.lat, lng=relative.lng) }}">Show on map</a>
+              {% endif %}
+              <form method="post"
+                    action="{{ url_for('who_was_that.relative_delete', person_id=person.id, relative_id=relative.id) }}"
+                    data-confirm="Remove {{ relative.name or 'this relative' }} as a relationship on this card? Their own pin and card (if any) stay.">
+                <button class="text-button text-button--danger" type="submit">Remove relationship</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="wwt-actions">
+      <a class="button button--secondary" href="{{ url_for('who_was_that.people') }}">Back to people</a>
+      {% if person.location %}
+        <a class="button button--secondary" href="{{ url_for('who_was_that.index', person=person.id) }}">Show on map</a>
+      {% endif %}
+      <a class="button button--primary" href="{{ url_for('who_was_that.person_edit', person_id=person.id) }}">Edit</a>
+      {% if not person.is_self %}
+        <form method="post" action="{{ url_for('who_was_that.person_delete', person_id=person.id) }}"
+              data-confirm="This removes {{ person.name }} from the notebook. This can't be undone.">
+          <button class="text-button text-button--danger" type="submit">Delete</button>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('who_was_that.static', filename='form.js') }}" defer></script>
+{% endblock %}

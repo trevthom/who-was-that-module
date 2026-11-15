@@ -1,0 +1,5 @@
+{#- Shared display helpers for the Who Was That? pages. -#}
+{% macro initials(name) -%}
+{%- set parts = (name or '').split() -%}
+{%- if parts %}{{ parts[:2] | map('first') | join | upper }}{% else %}?{% endif -%}
+{%- endmacro %}

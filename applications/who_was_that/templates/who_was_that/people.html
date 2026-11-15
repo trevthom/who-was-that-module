@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "who_was_that/_macros.html" import initials %}
+
+{% block title %}People · {{ current_application.name }} · Thompson{% endblock %}
+{% block body_class %}app-body{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='who_was_that.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="app-layout wwt-page" style="--app-accent: {{ current_application.accent }}">
+  <header class="app-hero">
+    <div>
+      <p class="eyebrow">{{ current_application.name }}</p>
+      <h1>People</h1>
+      <p class="app-hero__sub">Everyone pinned on the family map.</p>
+    </div>
+    <span class="app-hero__icon" aria-hidden="true">{{ icon('users') }}</span>
+  </header>
+
+  {% if removed %}
+    <p class="notice" role="status">Card deleted. Their references on other cards were removed too.</p>
+  {% endif %}
+
+  <section class="panel">
+    <div class="wwt-page-head">
+      <div>
+        <p class="eyebrow">
+          {% if query %}Search{% else %}On the map{% endif %}
+        </p>
+        <h2>{{ total }} {% if total == 1 %}person{% else %}people{% endif %}</h2>
+      </div>
+      <div class="wwt-page-actions">
+        <a class="button button--secondary" href="{{ url_for('who_was_that.index') }}">Map</a>
+        <a class="button button--primary" href="{{ url_for('who_was_that.person_new') }}">Add a person</a>
+      </div>
+    </div>
+
+    <form class="wwt-search-form" method="get" action="{{ url_for('who_was_that.people') }}">
+      <label class="field wwt-search-form__field">
+        <span>Search people</span>
+        <input name="q" type="search" maxlength="120" value="{{ query }}" placeholder="Search people…">
+      </label>
+      <button class="button button--secondary" type="submit">Search</button>
+      {% if query %}
+        <a class="text-button" href="{{ url_for('who_was_that.people') }}">Clear</a>
+      {% endif %}
+    </form>
+
+    {% if people %}
+      <ul class="wwt-people-list">
+        {% for person in people %}
+          <li class="wwt-person-item">
+            <a class="wwt-person-link" href="{{ url_for('who_was_that.person_detail', person_id=person.id) }}">
+              <span class="wwt-avatar" aria-hidden="true">{{ initials(person.name) }}</span>
+              <span class="wwt-person-meta">
+                <span class="wwt-person-name">{{ person.name }}</span>
+                <span class="wwt-person-sub">
+                  {% if person.known_from %}{{ person.known_from }}
+                  {% elif person.location %}{{ person.address or 'Pinned on map' }}
+                  {% else %}No location{% endif %}
+                </span>
+              </span>
+              <span class="wwt-person-arrow" aria-hidden="true">{{ icon('chevron-right') }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('users') }}</span>
+        <h3>{% if query %}Nobody matches “{{ query }}”{% else %}No people yet{% endif %}</h3>
+        <p>
+          {% if query %}
+            Try a shorter name, or <a href="{{ url_for('who_was_that.people') }}">clear the search</a>.
+          {% else %}
+            Tap <b>Add person</b> to pin someone.
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

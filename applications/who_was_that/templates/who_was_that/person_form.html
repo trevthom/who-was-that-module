@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}{{ headline }} · {{ current_application.name }} · Thompson{% endblock %}
+{% block body_class %}app-body{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='who_was_that.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="app-layout wwt-page" style="--app-accent: {{ current_application.accent }}"
+         data-wwt-base="{{ url_for('who_was_that.index') }}">
+  <header class="app-hero">
+    <div>
+      <p class="eyebrow">{{ current_application.name }}</p>
+      <h1>{{ headline }}</h1>
+      <p class="app-hero__sub">Everything here is shared with the whole family.</p>
+    </div>
+    <span class="app-hero__icon" aria-hidden="true">{{ icon('users') }}</span>
+  </header>
+
+  {% if error %}
+    <p class="form-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form class="panel wwt-form" method="post" action="{{ form_action }}">
+    {% if is_self %}<input type="hidden" name="is_self" value="1">{% endif %}
+
+    <div class="field-row">
+      <label class="field">
+        <span>Name</span>
+        <input name="name" type="text" maxlength="120" required
+               value="{{ values.get('name', '') }}" placeholder="Their name">
+      </label>
+      <label class="field">
+        <span>Birthday</span>
+        <input name="birthday" type="date" value="{{ values.get('birthday', '') }}">
+      </label>
+    </div>
+
+    <label class="field">
+      <span>Pets</span>
+      <input name="pets" type="text" maxlength="200"
+             value="{{ values.get('pets', '') }}" placeholder="e.g. dog, Rex">
+    </label>
+
+    {% if is_self %}
+      <input type="hidden" name="known_from" value="{{ values.get('known_from', '') }}">
+    {% else %}
+      <label class="field">
+        <span>Where you know them from</span>
+        <input name="known_from" type="text" maxlength="200"
+               value="{{ values.get('known_from', '') }}"
+               placeholder="e.g. conference, gym, neighbour">
+      </label>
+    {% endif %}
+
+    <label class="field">
+      <span>General notes</span>
+      <textarea name="notes" maxlength="5000"
+                placeholder="Anything you want to remember">{{ values.get('notes', '') }}</textarea>
+    </label>
+
+    <fieldset class="wwt-fieldset">
+      <legend>Relatives &amp; children</legend>
+      <p class="field-hint">A relative with a location gets their own pin and card.</p>
+      <div id="wwt-relatives">
+        {% for relative in relatives %}
+          <div class="wwt-rel-block">
+            <button class="wwt-rel-remove" type="button" aria-label="Remove this relative">×</button>
+            <div class="field-row">
+              <label class="field">
+                <span>Relationship</span>
+                <select name="relative_type">
+                  {% for type in relative_types %}
+                    <option {% if type == relative.type %}selected{% endif %}>{{ type }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field">
+                <span>Name</span>
+                <input name="relative_name" type="text" maxlength="120" value="{{ relative.name }}">
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field">
+                <span>Latitude</span>
+                <input name="relative_lat" type="number" step="0.000001" min="-90" max="90"
+                       class="wwt-rel-lat"
+                       value="{{ relative.lat if relative.lat is not none else '' }}">
+              </label>
+              <label class="field">
+                <span>Longitude</span>
+                <input name="relative_lng" type="number" step="0.000001" min="-180" max="180"
+                       class="wwt-rel-lng"
+                       value="{{ relative.lng if relative.lng is not none else '' }}">
+              </label>
+            </div>
+            <label class="field">
+              <span>Address (optional)</span>
+              <input name="relative_address" type="text" maxlength="300"
+                     class="wwt-rel-address" value="{{ relative.address }}">
+            </label>
+            {% if people %}
+              <label class="field">
+                <span>Use someone from your people</span>
+                <select class="wwt-rel-pick">
+                  <option value="">Choose someone…</option>
+                  {% for candidate in people %}
+                    <option value="{{ candidate.id }}"
+                            data-name="{{ candidate.name }}"
+                            data-lat="{{ candidate.lat if candidate.lat is not none else '' }}"
+                            data-lng="{{ candidate.lng if candidate.lng is not none else '' }}"
+                            data-address="{{ candidate.address }}">{{ candidate.name }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <button class="button button--secondary" type="button" id="wwt-add-relative">
+        + Add relative or child
+      </button>
+    </fieldset>
+
+    <fieldset class="wwt-fieldset">
+      <legend>Location</legend>
+      <div class="wwt-address-search">
+        <label class="field wwt-address-search__field">
+          <span>Search an address</span>
+          <input id="wwt-address-query" type="text" maxlength="240" autocomplete="off"
+                 placeholder="e.g. 350 Fifth Ave, New York">
+        </label>
+        <button class="button button--secondary" type="button" id="wwt-address-go">Search</button>
+      </div>
+      <div id="wwt-address-results" class="wwt-address-results"></div>
+
+      <label class="field">
+        <span>Address (optional)</span>
+        <input name="address" id="wwt-address" type="text" maxlength="300"
+               value="{{ values.get('address', '') }}"
+               placeholder="Filled in when you search an address">
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Latitude</span>
+          <input name="lat" id="wwt-lat" type="number" step="0.000001" min="-90" max="90"
+                 value="{{ values.get('lat') if values.get('lat') is not none else '' }}">
+        </label>
+        <label class="field">
+          <span>Longitude</span>
+          <input name="lng" id="wwt-lng" type="number" step="0.000001" min="-180" max="180"
+                 value="{{ values.get('lng') if values.get('lng') is not none else '' }}">
+        </label>
+      </div>
+      <p class="field-hint">
+        Leave both blank to keep this person off the map, or
+        <a href="{{ url_for('who_was_that.index') }}">drop the pin on the map</a>.
+      </p>
+    </fieldset>
+
+    <div class="wwt-actions">
+      <a class="button button--secondary"
+         href="{{ url_for('who_was_that.person_detail', person_id=person.id) if person else url_for('who_was_that.people') }}">Cancel</a>
+      <button class="button button--primary" type="submit">Save</button>
+    </div>
+  </form>
+</section>
+
+<template id="wwt-relative-template">
+  <div class="wwt-rel-block">
+    <button class="wwt-rel-remove" type="button" aria-label="Remove this relative">×</button>
+    <div class="field-row">
+      <label class="field">
+        <span>Relationship</span>
+        <select name="relative_type">
+          {% for type in relative_types %}<option>{{ type }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field">
+        <span>Name</span>
+        <input name="relative_name" type="text" maxlength="120" placeholder="Relative's name">
+      </label>
+    </div>
+    <div class="field-row">
+      <label class="field">
+        <span>Latitude</span>
+        <input name="relative_lat" type="number" step="0.000001" min="-90" max="90" class="wwt-rel-lat">
+      </label>
+      <label class="field">
+        <span>Longitude</span>
+        <input name="relative_lng" type="number" step="0.000001" min="-180" max="180" class="wwt-rel-lng">
+      </label>
+    </div>
+    <label class="field">
+      <span>Address (optional)</span>
+      <input name="relative_address" type="text" maxlength="300" class="wwt-rel-address">
+    </label>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('who_was_that.static', filename='form.js') }}" defer></script>
+{% endblock %}
