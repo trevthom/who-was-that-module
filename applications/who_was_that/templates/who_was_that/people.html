@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "who_was_that/_macros.html" import initials %}
+{% from "_chrome.html" import hub_back %}
 
 {% block title %}People · {{ current_application.name }} · Thompson{% endblock %}
 {% block body_class %}app-body{% endblock %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='who_was_that.css') }}">
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='shell.css') }}">
 {% endblock %}
 
 {% block content %}
 <section class="app-layout wwt-page" style="--app-accent: {{ current_application.accent }}">
+  {{ hub_back() }}
   <header class="app-hero">
     <div>
       <p class="eyebrow">{{ current_application.name }}</p>
