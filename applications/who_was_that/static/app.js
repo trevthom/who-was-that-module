@@ -40,6 +40,9 @@
   let editorId = null;
 
   let panelOpen = false;
+  let mapBusy = false;
+  let pollBusy = false;
+  let lastRemoteFingerprint = "";
 
   /* ---------- tiny helpers ---------- */
 
@@ -105,6 +108,7 @@
     const init = {
       method: settings.method || 'GET',
       credentials: 'same-origin',
+      cache: 'no-store',
       headers: { Accept: 'application/json' },
     };
     if (settings.body !== undefined) {
@@ -132,12 +136,65 @@
     return data;
   }
 
+  function remoteFingerprint(next) {
+    return JSON.stringify({
+      self: next.self || null,
+      people: Array.isArray(next.people) ? next.people : [],
+    });
+  }
+
   function applyState(next) {
     if (!next) return;
     state.self = next.self || null;
     state.people = Array.isArray(next.people) ? next.people : [];
     state.settings = next.settings || state.settings;
+    lastRemoteFingerprint = remoteFingerprint(next);
     applyTheme(state.settings.theme);
+  }
+
+  /** Adopt people another device changed, without touching display settings. */
+  function applyRemoteState(next) {
+    state.self = next.self || null;
+    state.people = Array.isArray(next.people) ? next.people : [];
+    lastRemoteFingerprint = remoteFingerprint(next);
+    renderPins();
+  }
+
+  /**
+   * Only pull in remote people while nobody is in the middle of something:
+   * no open panel or editor, no pin being placed, no map drag, no typing.
+   * A refresh then cannot move what the person is looking at or typing.
+   */
+  function canApplyRemote() {
+    if (document.hidden) return false;
+    if (panelOpen || document.querySelector('.wwt-modal')) return false;
+    if (pickHandler || draftPin || mapBusy) return false;
+    const loading = $('app-loading');
+    if (loading && !loading.classList.contains('hidden')) return false;
+    const active = document.activeElement;
+    if (
+      active &&
+      (active.matches('input, textarea, select') || active.isContentEditable)
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  async function pollState() {
+    if (document.hidden || pollBusy) return;
+    pollBusy = true;
+    try {
+      const data = await api('/api/state');
+      if (!data || !data.state) return;
+      if (!canApplyRemote()) return;
+      if (remoteFingerprint(data.state) === lastRemoteFingerprint) return;
+      applyRemoteState(data.state);
+    } catch (error) {
+      // Keep the last snapshot; the next tick tries again.
+    } finally {
+      pollBusy = false;
+    }
   }
 
   /* ---------- theme ---------- */
@@ -187,6 +244,8 @@
 
     map = window.L.map(container, { zoomControl: false, attributionControl: false })
       .setView([MAP_DEFAULT.lat, MAP_DEFAULT.lng], MAP_DEFAULT.zoom);
+    map.on('dragstart zoomstart', () => { mapBusy = true; });
+    map.on('dragend zoomend', () => { mapBusy = false; });
     window.L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     const tiles = window.L.tileLayer(BASE + '/tiles/{z}/{x}/{y}.png', { maxZoom: 19 });
@@ -1374,5 +1433,14 @@
     else if (state.settings.find_me_on_login) locateOrWarn();
   }
 
-  boot();
+  boot().then(() => {
+    window.setInterval(pollState, 2000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pollState();
+    });
+    window.addEventListener('focus', pollState);
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) pollState();
+    });
+  });
 })();
