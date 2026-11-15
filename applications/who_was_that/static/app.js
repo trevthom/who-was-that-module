@@ -830,6 +830,7 @@
       saveCard(values);
     };
 
+    modal.querySelector('.wwt-x-btn').onclick = closeModal;
     modal.querySelectorAll('[data-x]').forEach((button) => (button.onclick = closeModal));
     openModal(modal);
   }
@@ -870,7 +871,7 @@
         });
       };
 
-      block.querySelector('.rel-remove').onclick = () => {
+      block.querySelector('.wwt-rel-remove').onclick = () => {
         editorDraft = captureEditorForm(modal);
         editorDraft.relatives.splice(index, 1);
         renderRelatives(wrap, modal);
