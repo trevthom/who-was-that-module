@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_chrome.html" import hub_back %}
 
 {% block title %}{{ current_application.name }} · Thompson{% endblock %}
 {% block body_class %}app-body{% endblock %}
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='leaflet/leaflet.css') }}">
   <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='fonts.css') }}">
   <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='who_was_that.css') }}">
+  <link rel="stylesheet" href="{{ url_for('who_was_that.static', filename='shell.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -19,6 +21,7 @@
        aria-label="Map of the people you have pinned"></div>
 
   <header class="wwt-topbar">
+    {{ hub_back() }}
     <div class="wwt-topbar-brand">
       <span class="wwt-brand-lock" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
