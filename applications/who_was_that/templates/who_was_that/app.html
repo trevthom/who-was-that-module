@@ -81,10 +81,6 @@
       <a href="https://www.openstreetmap.org/copyright" target="_blank"
          rel="noopener noreferrer">&copy; OpenStreetMap</a>
     </div>
-    <nav class="wwt-footer-links" aria-label="Who Was That? links">
-      <a href="{{ url_for('who_was_that.people') }}">All people</a>
-      <a href="{{ url_for('who_was_that.person_new') }}">Add person</a>
-    </nav>
   </footer>
 
   <div id="toast-root" class="wwt-toast-root"></div>
@@ -108,5 +104,5 @@
 
 {% block scripts %}
   <script src="{{ url_for('who_was_that.static', filename='leaflet/leaflet.js') }}" defer></script>
-  <script src="{{ url_for('who_was_that.static', filename='app.js', v='3') }}" defer></script>
+  <script src="{{ url_for('who_was_that.static', filename='app.js', v='4') }}" defer></script>
 {% endblock %}

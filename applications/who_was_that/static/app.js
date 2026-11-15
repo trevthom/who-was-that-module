@@ -819,10 +819,6 @@
     };
   }
 
-  function emptyRelative() {
-    return { type: 'Parent', name: '', lat: null, lng: null, address: '' };
-  }
-
   function openEditor(idOrSelf) {
     editorIsSelf = idOrSelf === 'self';
     if (idOrSelf === 'self') {
@@ -864,17 +860,20 @@
 
     const modal = node(
       '<div class="wwt-modal" role="dialog" aria-modal="true">' +
-      '<div class="wwt-modal-head"><h2>' + escapeHtml(title) + '</h2>' +
-      '<button class="wwt-x-btn" type="button" aria-label="Close" data-x>×</button></div>' +
+      '<div class="wwt-modal-head"><h2>' + escapeHtml(title) + '</h2></div>' +
       '<div class="wwt-modal-body">' +
+      '<label class="wwt-field-label">Address</label>' +
+      '<button id="ed-pin" class="wwt-btn wwt-btn-pin block" type="button" data-edit="pin">' +
+      (card.location ? 'Move pin / change address' : 'Set address or pin') + '</button>' +
+      '<div id="ed-pin-status" class="wwt-pin-status ' + (card.location ? 'set' : '') + '">' +
+      locationStatusHtml(card) + '</div>' +
+      '<hr class="wwt-ed-divider">' +
       '<div class="wwt-name-row">' +
       '<div class="wwt-name-field"><label class="wwt-field-label">Name</label>' +
       '<input id="ed-name" class="wwt-input" value="' + escapeHtml(card.name) + '" placeholder="Their name"></div>' +
       '<div class="wwt-bday-field"><label class="wwt-field-label">Birthday</label>' +
       '<input id="ed-birthday" class="wwt-input" type="date" value="' + escapeHtml(card.birthday) + '"></div>' +
       '</div>' +
-      '<label class="wwt-field-label">Pets</label>' +
-      '<input id="ed-pets" class="wwt-input" value="' + escapeHtml(card.pets) + '" placeholder="e.g. dog, Rex">' +
       (editorIsSelf
         ? ''
         : '<label class="wwt-field-label">Where you know them from</label>' +
@@ -883,15 +882,10 @@
       '<label class="wwt-field-label">General notes</label>' +
       '<textarea id="ed-notes" class="wwt-input" placeholder="Anything you want to remember">' +
       escapeHtml(card.notes) + '</textarea>' +
-      '<label class="wwt-field-label">Relatives &amp; children</label>' +
+      (card.relatives && card.relatives.length
+        ? '<label class="wwt-field-label">Relatives &amp; children</label>'
+        : '') +
       '<div id="ed-relatives"></div>' +
-      '<button id="ed-add-rel" class="wwt-btn wwt-btn-ghost small" type="button" data-edit="add-relative">+ Add relative or child</button>' +
-      '<hr class="wwt-ed-divider">' +
-      '<label class="wwt-field-label">Location</label>' +
-      '<button id="ed-pin" class="wwt-btn wwt-btn-pin block" type="button" data-edit="pin">' +
-      (card.location ? 'Move pin / change address' : 'Set address or pin') + '</button>' +
-      '<div id="ed-pin-status" class="wwt-pin-status ' + (card.location ? 'set' : '') + '">' +
-      locationStatusHtml(card) + '</div>' +
       '</div>' +
       '<div class="wwt-modal-foot">' +
       '<button class="wwt-btn wwt-btn-ghost" type="button" data-x>Cancel</button>' +
@@ -901,13 +895,6 @@
 
     const relWrap = modal.querySelector('#ed-relatives');
     renderRelatives(relWrap, modal);
-
-    const addRelative = control(modal, '[data-edit="add-relative"]', '+ Add relative or child button');
-    if (addRelative) addRelative.onclick = () => {
-      editorDraft = captureEditorForm(modal);
-      editorDraft.relatives.push(emptyRelative());
-      renderRelatives(relWrap, modal);
-    };
 
     const pinButton = control(modal, '[data-edit="pin"]', 'set-address-or-pin button');
     if (pinButton) pinButton.onclick = () => {
@@ -1059,7 +1046,6 @@
 
     draft.name = value('#ed-name');
     draft.birthday = value('#ed-birthday');
-    draft.pets = value('#ed-pets');
     const knownFrom = modal.querySelector('#ed-knownfrom');
     if (knownFrom) draft.known_from = knownFrom.value.trim();
     const notes = modal.querySelector('#ed-notes');
