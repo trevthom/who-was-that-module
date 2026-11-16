@@ -5,8 +5,10 @@ backend was the Nostr network: one encrypted notebook event per identity key,
 stored on user-chosen relays. That backend is retired. The app now runs inside
 the hub as a normal Flask module with tables in `data/thompson.db`.
 
-- Module: `applications/who_was_that/`
-- Registry id / Blueprint name: `who_was_that`
+- Module folder: `applications/who-was-that-module/` (this repository's root *is*
+  that folder — `app.py` sits at the top, because the hub only registers a
+  folder that directly contains `app.py`)
+- Registry id / Blueprint name: `who_was_that_module` / `who_was_that`
 - URL: `/who-was-that`
 - Display name: **Who Was That?**
 

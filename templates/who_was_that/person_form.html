@@ -30,6 +30,43 @@
   <form class="panel wwt-form" method="post" action="{{ form_action }}">
     {% if is_self %}<input type="hidden" name="is_self" value="1">{% endif %}
 
+    <fieldset class="wwt-fieldset">
+      <legend>Address</legend>
+      <div class="wwt-address-search">
+        <label class="field wwt-address-search__field">
+          <span>Search an address</span>
+          <input id="wwt-address-query" type="text" maxlength="240" autocomplete="off"
+                 placeholder="e.g. 350 Fifth Ave, New York">
+        </label>
+        <button class="button button--secondary" type="button" id="wwt-address-go">Search</button>
+      </div>
+      <div id="wwt-address-results" class="wwt-address-results"></div>
+
+      <label class="field">
+        <span>Address (optional)</span>
+        <input name="address" id="wwt-address" type="text" maxlength="300"
+               value="{{ values.get('address', '') }}"
+               placeholder="Filled in when you search an address">
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Latitude</span>
+          <input name="lat" id="wwt-lat" type="number" step="0.000001" min="-90" max="90"
+                 value="{{ values.get('lat') if values.get('lat') is not none else '' }}">
+        </label>
+        <label class="field">
+          <span>Longitude</span>
+          <input name="lng" id="wwt-lng" type="number" step="0.000001" min="-180" max="180"
+                 value="{{ values.get('lng') if values.get('lng') is not none else '' }}">
+        </label>
+      </div>
+      <p class="field-hint">
+        Leave both blank to keep this person off the map, or
+        <a href="{{ url_for('who_was_that.index') }}">drop the pin on the map</a>.
+      </p>
+    </fieldset>
+
     <div class="field-row">
       <label class="field">
         <span>Name</span>
@@ -42,11 +79,8 @@
       </label>
     </div>
 
-    <label class="field">
-      <span>Pets</span>
-      <input name="pets" type="text" maxlength="200"
-             value="{{ values.get('pets', '') }}" placeholder="e.g. dog, Rex">
-    </label>
+    {# Pets is no longer edited here; the value is carried through so saving keeps it. #}
+    <input type="hidden" name="pets" value="{{ values.get('pets', '') }}">
 
     {% if is_self %}
       <input type="hidden" name="known_from" value="{{ values.get('known_from', '') }}">
@@ -123,46 +157,6 @@
           </div>
         {% endfor %}
       </div>
-      <button class="button button--secondary" type="button" id="wwt-add-relative">
-        + Add relative or child
-      </button>
-    </fieldset>
-
-    <fieldset class="wwt-fieldset">
-      <legend>Location</legend>
-      <div class="wwt-address-search">
-        <label class="field wwt-address-search__field">
-          <span>Search an address</span>
-          <input id="wwt-address-query" type="text" maxlength="240" autocomplete="off"
-                 placeholder="e.g. 350 Fifth Ave, New York">
-        </label>
-        <button class="button button--secondary" type="button" id="wwt-address-go">Search</button>
-      </div>
-      <div id="wwt-address-results" class="wwt-address-results"></div>
-
-      <label class="field">
-        <span>Address (optional)</span>
-        <input name="address" id="wwt-address" type="text" maxlength="300"
-               value="{{ values.get('address', '') }}"
-               placeholder="Filled in when you search an address">
-      </label>
-
-      <div class="field-row">
-        <label class="field">
-          <span>Latitude</span>
-          <input name="lat" id="wwt-lat" type="number" step="0.000001" min="-90" max="90"
-                 value="{{ values.get('lat') if values.get('lat') is not none else '' }}">
-        </label>
-        <label class="field">
-          <span>Longitude</span>
-          <input name="lng" id="wwt-lng" type="number" step="0.000001" min="-180" max="180"
-                 value="{{ values.get('lng') if values.get('lng') is not none else '' }}">
-        </label>
-      </div>
-      <p class="field-hint">
-        Leave both blank to keep this person off the map, or
-        <a href="{{ url_for('who_was_that.index') }}">drop the pin on the map</a>.
-      </p>
     </fieldset>
 
     <div class="wwt-actions">
@@ -173,39 +167,8 @@
   </form>
 </section>
 
-<template id="wwt-relative-template">
-  <div class="wwt-rel-block">
-    <button class="wwt-rel-remove" type="button" aria-label="Remove this relative">×</button>
-    <div class="field-row">
-      <label class="field">
-        <span>Relationship</span>
-        <select name="relative_type">
-          {% for type in relative_types %}<option>{{ type }}</option>{% endfor %}
-        </select>
-      </label>
-      <label class="field">
-        <span>Name</span>
-        <input name="relative_name" type="text" maxlength="120" placeholder="Relative's name">
-      </label>
-    </div>
-    <div class="field-row">
-      <label class="field">
-        <span>Latitude</span>
-        <input name="relative_lat" type="number" step="0.000001" min="-90" max="90" class="wwt-rel-lat">
-      </label>
-      <label class="field">
-        <span>Longitude</span>
-        <input name="relative_lng" type="number" step="0.000001" min="-180" max="180" class="wwt-rel-lng">
-      </label>
-    </div>
-    <label class="field">
-      <span>Address (optional)</span>
-      <input name="relative_address" type="text" maxlength="300" class="wwt-rel-address">
-    </label>
-  </div>
-</template>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('who_was_that.static', filename='form.js', v='2') }}" defer></script>
+  <script src="{{ url_for('who_was_that.static', filename='form.js', v='3') }}" defer></script>
 {% endblock %}

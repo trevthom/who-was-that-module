@@ -22,7 +22,6 @@
 
   /* ---------- relative rows ---------- */
   const list = document.getElementById('wwt-relatives');
-  const template = document.getElementById('wwt-relative-template');
 
   function wireRelative(block) {
     const remove = block.querySelector('.wwt-rel-remove');
@@ -51,16 +50,6 @@
 
   if (list) {
     list.querySelectorAll('.wwt-rel-block').forEach(wireRelative);
-  }
-
-  const addButton = document.getElementById('wwt-add-relative');
-  if (addButton && list && template) {
-    addButton.addEventListener('click', function () {
-      const fragment = template.content.cloneNode(true);
-      const block = fragment.querySelector('.wwt-rel-block');
-      list.appendChild(fragment);
-      wireRelative(block);
-    });
   }
 
   /* ---------- address search ---------- */
